@@ -358,14 +358,16 @@ def math_calculator(expression: str) -> dict:
     Returns:
         包含結果的字典
     """
+    # 同時支援 math.sqrt(16) 和 sqrt(16) 兩種寫法
     allowed_names = {
         k: v for k, v in math.__dict__.items() if not k.startswith("_")
     }
     allowed_names["abs"] = abs
     allowed_names["round"] = round
+    allowed_names["math"] = math   # 允許 math.xxx 前綴語法
 
     try:
-        result = eval(expression, {"__builtins__": {}}, allowed_names)  # noqa: S307
+        result = eval(expression, {"__builtins__": {}, "math": math}, allowed_names)  # noqa: S307
         return {"expression": expression, "result": result}
     except Exception as exc:
         return {"expression": expression, "error": str(exc)}
