@@ -546,13 +546,14 @@ def health_check_prompt() -> str:
 # ────────────────────────────────────────────────
 # ASGI App 建立（供 Gunicorn / Uvicorn 使用）
 # ────────────────────────────────────────────────
-_mcp_http = mcp.http_app(path="/mcp")
+# 修正：將內部 path 設為空，避免掛載後變成 /mcp/mcp/sse
+_mcp_http = mcp.http_app(path="") 
 
 app = Starlette(
     routes=[
         Route("/",       endpoint=homepage),   # 首頁
         Route("/health", endpoint=health),     # 健康檢查
-        Mount("/mcp",    app=_mcp_http),       # MCP SSE
+        Mount("/mcp",    app=_mcp_http),       # 最終會變成 /mcp/sse
     ],
 )
 
