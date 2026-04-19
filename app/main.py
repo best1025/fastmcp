@@ -25,9 +25,7 @@ MY_TOOLS.append({"name": "add", "desc": "加法工具，範例：add(a=1, b=2)"}
 # 3. 生成 App
 app = mcp.http_app()
 
-@app.route("/health")
-async def health(request):
-    return "<h1>FastMCP Server is Online</h1><p>Endpoint: /mcp</p>"
+
 # 4. 首頁 (直接讀取 MY_TOOLS)
 
 
