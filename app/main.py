@@ -11,8 +11,260 @@ from typing import Optional
 
 from fastmcp import FastMCP
 from starlette.applications import Starlette
-from starlette.routing import Mount
+from starlette.requests import Request
+from starlette.responses import HTMLResponse, JSONResponse
+from starlette.routing import Mount, Route
 from starlette.middleware.cors import CORSMiddleware
+
+# ────────────────────────────────────────────────
+# 首頁 HTML（GET /）
+# ────────────────────────────────────────────────
+HOMEPAGE_HTML = """\
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FastMCP Demo Server</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0d1117;
+      --card:    #161b22;
+      --border:  #30363d;
+      --accent:  #58a6ff;
+      --green:   #3fb950;
+      --purple:  #bc8cff;
+      --orange:  #f0883e;
+      --text:    #e6edf3;
+      --sub:     #8b949e;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(63,185,80,.15);
+      border: 1px solid rgba(63,185,80,.4);
+      color: var(--green);
+      border-radius: 99px;
+      padding: 4px 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      margin-bottom: 24px;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: .4; transform: scale(.7); }
+    }
+    h1 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .subtitle {
+      color: var(--sub);
+      font-size: 1rem;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 860px;
+      margin-bottom: 40px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+      transition: border-color .2s, transform .2s;
+    }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .card-icon { font-size: 1.5rem; margin-bottom: 10px; }
+    .card-title { font-weight: 600; font-size: .95rem; margin-bottom: 6px; }
+    .card-desc  { color: var(--sub); font-size: .83rem; line-height: 1.6; }
+    .card-tag {
+      display: inline-block;
+      margin-top: 10px;
+      background: rgba(88,166,255,.12);
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: .75rem;
+      font-family: monospace;
+    }
+    .section-title {
+      color: var(--sub);
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      align-self: flex-start;
+      max-width: 860px;
+      width: 100%;
+    }
+    .endpoint-box {
+      width: 100%;
+      max-width: 860px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+    .ep-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ep-row:last-child { border-bottom: none; }
+    .method {
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      min-width: 42px;
+      text-align: center;
+    }
+    .get  { background: rgba(63,185,80,.2);  color: var(--green); }
+    .sse  { background: rgba(240,136,62,.2); color: var(--orange); }
+    .ep-path { font-family: monospace; font-size: .88rem; flex: 1; }
+    .ep-note { color: var(--sub); font-size: .8rem; }
+    footer {
+      color: var(--sub);
+      font-size: .8rem;
+      margin-top: auto;
+      padding-top: 32px;
+      text-align: center;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="badge"><div class="dot"></div>RUNNING</div>
+  <h1>FastMCP Demo Server</h1>
+  <p class="subtitle">基於 FastMCP 的 MCP 示範伺服器 &mdash; Azure App Service (F1)</p>
+
+  <p class="section-title">可用工具 (Tools)</p>
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">👋</div>
+      <div class="card-title">hello</div>
+      <div class="card-desc">打招呼，確認伺服器連線是否正常。</div>
+      <div class="card-tag">hello(name)</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚖️</div>
+      <div class="card-title">calculate_bmi</div>
+      <div class="card-desc">輸入體重與身高，計算 BMI 並自動分類。</div>
+      <div class="card-tag">calculate_bmi(weight_kg, height_m)</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🕐</div>
+      <div class="card-title">get_current_time</div>
+      <div class="card-desc">取得目前 UTC 時間（台灣時間 +8 小時）。</div>
+      <div class="card-tag">get_current_time()</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🧮</div>
+      <div class="card-title">math_calculator</div>
+      <div class="card-desc">安全數學運算器，支援 math 模組所有函數。</div>
+      <div class="card-tag">math_calculator(expression)</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🌤️</div>
+      <div class="card-title">get_weather</div>
+      <div class="card-desc">查詢城市即時天氣，使用 wttr.in 免費 API。</div>
+      <div class="card-tag">get_weather(city)</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">📏</div>
+      <div class="card-title">unit_converter</div>
+      <div class="card-desc">長度、重量、溫度單位換算。</div>
+      <div class="card-tag">unit_converter(value, from_unit, to_unit)</div>
+    </div>
+  </div>
+
+  <p class="section-title">端點 (Endpoints)</p>
+  <div class="endpoint-box">
+    <div class="ep-row">
+      <span class="method get">GET</span>
+      <span class="ep-path">/</span>
+      <span class="ep-note">此頁面（伺服器狀態）</span>
+    </div>
+    <div class="ep-row">
+      <span class="method get">GET</span>
+      <span class="ep-path">/health</span>
+      <span class="ep-note">健康檢查 JSON</span>
+    </div>
+    <div class="ep-row">
+      <span class="method sse">SSE</span>
+      <span class="ep-path">/mcp/sse</span>
+      <span class="ep-note">MCP 客戶端連線端點（SSE）</span>
+    </div>
+    <div class="ep-row">
+      <span class="method get">POST</span>
+      <span class="ep-path">/mcp/messages/</span>
+      <span class="ep-note">MCP 訊息端點</span>
+    </div>
+  </div>
+
+  <footer>
+    FastMCP Demo v1.0.0 &bull;
+    <a href="https://github.com/best1025/fastmcp" target="_blank">GitHub</a> &bull;
+    <a href="/health" target="_blank">/health</a>
+  </footer>
+</body>
+</html>
+"""
+
+
+async def homepage(request: Request) -> HTMLResponse:
+    """首頁：顯示伺服器狀態與工具清單。"""
+    return HTMLResponse(HOMEPAGE_HTML)
+
+
+async def health(request: Request) -> JSONResponse:
+    """健康檢查端點，供 Azure / 監控系統使用。"""
+    return JSONResponse({
+        "status": "ok",
+        "server": "FastMCP-Demo",
+        "version": "1.0.0",
+        "utc_time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "mcp_endpoint": "/mcp/sse",
+    })
 
 # ────────────────────────────────────────────────
 # FastMCP 伺服器初始化
@@ -296,7 +548,9 @@ _mcp_http = mcp.http_app(path="/mcp")
 
 app = Starlette(
     routes=[
-        Mount("/", app=_mcp_http),
+        Route("/",       endpoint=homepage),   # 首頁
+        Route("/health", endpoint=health),     # 健康檢查
+        Mount("/mcp",    app=_mcp_http),       # MCP SSE
     ],
 )
 
