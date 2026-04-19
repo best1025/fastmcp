@@ -1,6 +1,9 @@
 from fastmcp import FastMCP
-
 import os
+
+from starlette.applications import Starlette
+from starlette.responses import HTMLResponse
+from starlette.routing import Route
 
 # 1. 初始化
 mcp = FastMCP(name="FastMCP-Demo")
@@ -21,10 +24,20 @@ def add(a: int, b: int):
     return a + b
 MY_TOOLS.append({"name": "add", "desc": "加法工具，範例：add(a=1, b=2)"})
 
+async def homepage(request):
+    return HTMLResponse("<h1>MCP Server Running</h1>")
 
 # 3. 生成 App
-app = mcp.http_app()
+mcp_app  = mcp.http_app()
 
+
+app = Starlette(
+    routes=[
+        Route("/", homepage),
+        Route("/mcp", mcp_app),
+    ],
+    lifespan=mcp_app.lifespan  # ⭐ 核心
+)
 
 # 4. 首頁 (直接讀取 MY_TOOLS)
 
