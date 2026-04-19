@@ -3,51 +3,55 @@ from starlette.responses import HTMLResponse, JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 import os
 
-# 1. 初始化 FastMCP
-mcp = FastMCP(
-    name="FastMCP-Demo",
-    instructions="這是一個用於 GitHub 示範的 FastMCP 伺服器，支援問候與基礎運算。"
-)
+# 1. 初始化
+mcp = FastMCP(name="FastMCP-Demo")
 
-# 2. 定義工具 (Tools)
+# --- 手動統計清單 ---
+MY_TOOLS = []
+
+# 2. 定義工具並加入清單
 @mcp.tool()
 def hello(name: str = "World"):
-    """問候工具：回傳歡迎訊息。"""
-    return f"Hello, {name}! FastMCP 伺服器運作正常。"
+    """問候工具"""
+    return f"Hello, {name}!"
+MY_TOOLS.append({"name": "hello", "desc": "問候工具，範例：hello(name='Tom')"})
 
 @mcp.tool()
 def add(a: int, b: int):
-    """運算工具：執行簡單的加法。"""
+    """加法工具"""
     return a + b
+MY_TOOLS.append({"name": "add", "desc": "加法工具，範例：add(a=1, b=2)"})
 
-@mcp.tool()
-def get_server_status():
-    """狀態工具：確認伺服器運作資訊。"""
-    return {"status": "online", "platform": "FastMCP"}
+# 3. 生成 App
+app = mcp.http_app()
 
-# 3. 建立 ASGI App 物件 (供生產環境 gunicorn/uvicorn 使用)
-# 將 path 設為 /mcp 是一個業界常見的規範
-app = mcp.http_app(path="/mcp")
-
-# 添加一個美觀的首頁儀表板
+# 4. 首頁 (直接讀取 MY_TOOLS)
 @app.route("/")
 async def homepage(request):
-    html = """
+    tools_html = "".join([
+        f"""
+        <div style='background:#1c2128;padding:15px;margin:10px;border-radius:8px;border:1px solid #30363d;text-align:left;'>
+            <b style='color:#58a6ff;font-size:1.1rem;'>{t['name']}</b>
+            <div style='color:#8b949e;font-size:0.9rem;margin-top:5px;'>{t['desc']}</div>
+        </div>
+        """
+        for t in MY_TOOLS
+    ])
+    
+    html = f"""
     <html>
-        <head>
-            <title>FastMCP Demo</title>
-            <style>
-                body { font-family: sans-serif; background: #0d1117; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-                .card { background: #161b22; border: 1px solid #30363d; padding: 2rem; border-radius: 8px; text-align: center; }
-                code { color: #58a6ff; }
-            </style>
-        </head>
-        <body>
-            <div class="card">
-                <h1>🚀 FastMCP Server is Live</h1>
-                <p>SSE Endpoint: <code>/mcp/sse</code></p>
-                <p>Status: <span style="color: #3fb950;">Healthy</span></p>
+        <head><title>FastMCP Dashboard</title></head>
+        <body style="font-family:sans-serif;background:#0d1117;color:white;display:flex;flex-direction:column;align-items:center;padding-top:60px;">
+            <div style="background:#161b22;padding:40px;border-radius:12px;border:1px solid #30363d;width:100%;max-width:500px;text-align:center;">
+                <h1 style="color:#3fb950;margin-bottom:10px;">🚀 FastMCP Dashboard</h1>
+                <p style="color:#8b949e;">SSE Endpoint: <code style="color:#58a6ff;">/mcp</code></p>
+                
+                <div style="margin-top:30px; border-top:1px solid #30363d; padding-top:20px;">
+                    <h3 style="text-align:left;color:#f0f6fc;margin-left:10px;">已註冊指令 ({len(MY_TOOLS)})</h3>
+                    {tools_html}
+                </div>
             </div>
+            <p style="margin-top:20px;color:#484f58;font-size:0.8rem;">支援 FastMCP v3.2.4</p>
         </body>
     </html>
     """
@@ -57,10 +61,9 @@ async def homepage(request):
 async def health(request):
     return JSONResponse({"status": "ok"})
 
-# 4. 本地開發啟動邏輯
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
 if __name__ == "__main__":
     import uvicorn
-    # 使用環境變數 PORT，這能讓代碼直接在 Azure/Heroku 運行
-    port = int(os.environ.get("PORT", 8001))
-    # 本地開發使用 host="127.0.0.1"，伺服器部署請確保改為 "0.0.0.0"
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # 本地測試連線: http://127.0.0.1:8001/mcp
+    uvicorn.run(app, host="0.0.0.0", port=8001)
