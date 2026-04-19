@@ -77,6 +77,11 @@ http://localhost:8000/mcp/sse
 ```
 gunicorn -w 1 -k uvicorn.workers.UvicornWorker app.main:app
 ```
+或
+
+```
+gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT
+```
 
 ### 3. GitHub Actions 自動部署
 - 在 Azure Portal 設定 **部署中心 → GitHub**，選擇此倉庫的 `main` 分支。
