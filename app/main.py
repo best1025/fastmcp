@@ -1,7 +1,6 @@
 from fastmcp import FastMCP
 
 import os
-from starlette.responses import HTMLResponse, JSONResponse
 
 # 1. 初始化
 mcp = FastMCP(name="FastMCP-Demo")
@@ -28,7 +27,7 @@ app = mcp.http_app()
 
 @app.route("/health")
 async def health(request):
-    return JSONResponse({"status": "ok"})
+    return "<h1>FastMCP Server is Online</h1><p>Endpoint: /mcp</p>"
 # 4. 首頁 (直接讀取 MY_TOOLS)
 
 
