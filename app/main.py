@@ -1,6 +1,7 @@
 from fastmcp import FastMCP
 
 import os
+from starlette.responses import HTMLResponse, JSONResponse
 
 # 1. 初始化
 mcp = FastMCP(name="FastMCP-Demo")
@@ -21,9 +22,13 @@ def add(a: int, b: int):
     return a + b
 MY_TOOLS.append({"name": "add", "desc": "加法工具，範例：add(a=1, b=2)"})
 
+
 # 3. 生成 App
 app = mcp.http_app()
 
+@app.route("/health")
+async def health(request):
+    return JSONResponse({"status": "ok"})
 # 4. 首頁 (直接讀取 MY_TOOLS)
 
 
